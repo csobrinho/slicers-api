@@ -16,8 +16,8 @@ on:
         default: "02.06.00.51"
 
 permissions:
-  contents: read
   packages: write
+  contents: read
 
 env:
   REGISTRY: ghcr.io
@@ -25,6 +25,12 @@ env:
 
 jobs:
   build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -39,14 +45,13 @@ jobs:
             tag: bambu-v${{ inputs.bambu_version }}
             build_arg_name: BAMBU_VERSION
             build_arg_value: ${{ inputs.bambu_version }}
-    runs-on: ${{ matrix.platform.runner }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to the Container registry
         if: github.event_name != 'pull_request'
@@ -57,15 +62,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v
+        id: push
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.slicer.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ matrix.slicer.tag }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.slicer.tag }}
           build-args: ${{ matrix.slicer.build_arg_name }}=${{ matrix.slicer.build_arg_value }}
-          cache-from: type=gha,scope=${{ matrix.slicer.tag }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.slicer.tag }}
+          cache-from: type=gha,scope=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.slicer.tag }}
+          cache-to: type=gha,mode=max,scope=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.slicer.tag }}
 
       - name: Generate artifact attestation
         if: github.event_name != 'pull_request'
