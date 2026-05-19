@@ -36,12 +36,12 @@ jobs:
       matrix:
         slicer:
           - label: "Orca v${{ inputs.orca_version }}"
-            dockerfile: tests/docker/Dockerfile.test
+            dockerfile: Dockerfile
             tag: orca-v${{ inputs.orca_version }}
             build_arg_name: ORCA_VERSION
             build_arg_value: ${{ inputs.orca_version }}
           - label: "BambuStudio v${{ inputs.bambu_version }}"
-            dockerfile: tests/docker/Dockerfile.test.bambu-studio
+            dockerfile: Dockerfile.bambu-studio
             tag: bambu-v${{ inputs.bambu_version }}
             build_arg_name: BAMBU_VERSION
             build_arg_value: ${{ inputs.bambu_version }}
@@ -62,7 +62,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        id: push
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -78,5 +78,5 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
